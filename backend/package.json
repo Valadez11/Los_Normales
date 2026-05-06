@@ -1,0 +1,27 @@
+{
+  "name": "los_normales",
+  "version": "1.0.0",
+  "description": "Proyecto de punto de venta",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Valadez11/Los_Normales.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Valadez11/Los_Normales/issues"
+  },
+  "homepage": "https://github.com/Valadez11/Los_Normales#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
