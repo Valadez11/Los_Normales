@@ -223,3 +223,99 @@ body {
     .left-panel { border-right: none; border-bottom: 1px solid var(--border-light); }
     .stats-box { display: none; }
 }
+/* --- Estilos para la Pantalla de Ventas --- */
+.scanner-header, .ticket-header {
+    background-color: var(--pos-dark);
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+
+.camera-box {
+    flex: 1;
+    background-color: black;
+    border-bottom: 2px solid var(--border-light);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.manual-input-box {
+    display: flex;
+    padding: 20px;
+    background-color: var(--bg-page);
+}
+
+.manual-input-box input {
+    flex: 1;
+    padding: 15px;
+    font-size: 1.2rem;
+    border: 2px solid var(--border-light);
+    border-radius: 6px 0 0 6px;
+    outline: none;
+}
+
+.manual-input-box button {
+    border-radius: 0 6px 6px 0;
+    padding: 0 30px;
+}
+
+.ticket-panel {
+    background-color: white;
+    border-left: 2px solid var(--border-light);
+}
+
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.ticket-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.ticket-table th {
+    background-color: var(--bg-page);
+    color: var(--pos-dark);
+    padding: 10px;
+    font-size: 0.9rem;
+    border-bottom: 2px solid var(--border-light);
+}
+
+.ticket-table td {
+    padding: 15px 10px;
+    border-bottom: 1px solid var(--border-light);
+    color: #333;
+    font-weight: bold;
+}
+
+.ticket-totals {
+    background-color: var(--bg-page);
+    padding: 20px;
+    border-top: 2px solid var(--border-light);
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.2rem;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.main-total {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--pos-dark);
+    margin-bottom: 0;
+}
