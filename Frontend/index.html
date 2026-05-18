@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOFT POS® - Inicio de Sesión</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Variables Globales de tu Diseño */
+        :root {
+            --soft-blue: #3478F6;
+            --pos-dark: #2A3B4C;
+            --bg-numpad-blue: #4B8CCD;
+            --btn-red: #D93B48;
+            --btn-green: #37BA93;
+            --bg-page: #f0f2f5;
+            --border-light: #e0e4e8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            background-color: var(--bg-page);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        /* Contenedor Principal */
+        .login-card {
+            display: flex;
+            width: 1200px;
+            height: 700px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden; 
+        }
+
+        /* --- Panel Izquierdo --- */
+        .left-panel {
+            flex: 1.4;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-light);
+        }
+
+        .logo-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-text {
+            font-size: 6.5rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin: 0;
+        }
+        .soft-blue { color: var(--soft-blue); }
+        .pos-dark { color: var(--pos-dark); }
+        .reg-mark {
+            font-size: 2rem;
+            color: var(--pos-dark);
+            vertical-align: super;
+            font-weight: normal;
+        }
+
+        .stats-box {
+            display: flex;
+            margin: 35px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+        }
+        .stat-col {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+        }
+        .border-left { border-left: 1px solid var(--border-light); }
+        
+        .stat-title {
+            font-size: 0.85rem;
+            color: var(--pos-dark);
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .stat-item {
+            font-size: 1.05rem;
+            color: #555;
+            margin: 12px 0;
+            text-align: left;
+            padding-left: 30px;
+        }
+        .stat-empty {
+            font-size: 1.05rem;
+            color: #888;
+            margin-top: 30px;
+        }
+
+        /* --- Panel Derecho (Teclado Numérico) --- */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Cabecera del Teclado */
+        .numpad-header {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
+            background-color: white;
+            gap: 15px;
+        }
+
+        .pin-display-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .pin-label {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--pos-dark);
+            letter-spacing: 2px;
+        }
+
+        #pin-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--pos-dark);
+            text-align: center;
+            letter-spacing: 12px;
+            background: transparent;
+            min-height: 36px;
+        }
+
+        #btn-borrar {
+            background-color: var(--btn-red);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 15px 30px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        #btn-borrar:active { opacity: 0.8; }
+
+        /* Cuerpo del Teclado */
+        .numpad-body {
+            flex: 1;
+            background-color: var(--bg-numpad-blue);
+            padding: 25px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .num-btn, .btn-cancel, .btn-icon {
+            background-color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: var(--pos-dark);
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.05s, box-shadow 0.05s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .num-btn:active, .btn-cancel:active, .btn-icon:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .btn-cancel { color: var(--btn-red) !important; }
+
+        .mini-numpad-icon {
+            background-color: var(--soft-blue);
+            border-radius: 6px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 6px;
+            width: 40px;
+            height: 40px;
+            gap: 2px;
+        }
+        .mini-numpad-icon span {
+            color: white;
+            font-size: 0.75rem;
+            line-height: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .numpad-footer {
+            height: 100px;
+            background-color: var(--btn-green);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: background 0.2s;
+        }
+        .numpad-footer:active {
+            background-color: #2da17d;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function LoginApp() {
+            const [pin, setPin] = useState("");
+
+            const handleNumClick = (num) => {
+                if (pin.length < 6) {
+                    setPin(prev => prev + num);
+                }
+            };
+
+            const handleBackspace = () => {
+                setPin(prev => prev.slice(0, -1));
+            };
+
+            const handleClearAll = () => {
+                setPin("");
+            };
+
+            const handleLogin = () => {
+                if (pin === "") {
+                    alert("⚠️ Por favor ingresa tu contraseña de acceso.");
+                    return;
+                }
+
+                if (pin === "1234") {
+                    // FIX ROBUSTO IMPLEMENTADO:
+                    window.location.href = "ventas.html";
+
+
+                } else {
+                    alert("❌ Contraseña incorrecta. Contacta a un administrador.");
+                    setPin(""); 
+                }
+            };
+
+            const displayPin = "*".repeat(pin.length);
+
+            return (
+                <div className="login-card">
+                    <section className="left-panel">
+                        <div className="logo-wrapper">
+                            <h1 className="logo-text">
+                                <span className="soft-blue">SOFT</span> <span className="pos-dark">POS</span><span className="reg-mark">&reg;</span>
+                            </h1>
+                        </div>
+                        
+                        <div className="stats-box">
+                            <div className="stat-col">
+                                <h3 className="stat-title">BEBIDAS MÁS VENDIDAS</h3>
+                                <p className="stat-item">🍺 Cerveza Clara 355ML</p>
+                                <p className="stat-item">🥤 Refresco Cola 355ML</p>
+                            </div>
+                            <div className="stat-col border-left">
+                                <h3 className="stat-title">OTROS (PRODUCTOS) MÁS VENDIDOS</h3>
+                                <p className="stat-empty">No hay datos para mostrar.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="right-panel">
+                        
+                        <div className="numpad-header">
+                            <div className="pin-display-wrapper">
+                                <span className="pin-label">CONTRASEÑA</span>
+                                <input 
+                                    type="text" 
+                                    id="pin-input" 
+                                    value={displayPin} 
+                                    readOnly 
+                                />
+                            </div>
+                            <button id="btn-borrar" onClick={handleClearAll}>BORRAR</button>
+                        </div>
+                        
+                        <div className="numpad-body">
+                            {[7, 8, 9, 4, 5, 6, 1, 2, 3].map(num => (
+                                <button key={num} className="num-btn" onClick={() => handleNumClick(num.toString())}>
+                                    {num}
+                                </button>
+                            ))}
+                            
+                            <button className="btn-icon">
+                                <div className="mini-numpad-icon">
+                                    <span>1</span><span>2</span>
+                                    <span>3</span><span>4</span>
+                                </div>
+                            </button>
+                            
+                            <button className="num-btn" onClick={() => handleNumClick('0')}>0</button>
+                            <button className="btn-cancel" onClick={handleBackspace}>✖</button>
+                        </div>
+                        
+                        <div className="numpad-footer" onClick={handleLogin}>
+                            👤 ENTRAR
+                        </div>
+                        
+                    </section>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LoginApp />);
+    </script>
+</body>
+</html>
