@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOFT POS - React</title>
+    <title>SOFT POS - Punto de Venta</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
         :root {
@@ -29,12 +30,10 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
         body { overflow: hidden; background-color: var(--bg-main); }
-
         .app-container { display: flex; height: 100vh; width: 100vw; }
 
-        /* --- SIDEBAR --- */
+        /* SIDEBAR */
         .sidebar { width: 110px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
         .sidebar-item { width: 80%; padding: 15px 0; margin-bottom: 10px; text-align: center; cursor: pointer; border-radius: 8px; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: background 0.2s; }
         .sidebar-item:hover { background-color: rgba(255,255,255,0.1); }
@@ -42,21 +41,20 @@
         .sidebar-item span.icon { font-size: 1.5rem; }
         .sidebar-spacer { flex: 1; }
 
-        /* --- MAIN CONTENT --- */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .header { height: 60px; background: white; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border-light); }
         .header-left { display: flex; align-items: center; gap: 15px; font-size: 1.2rem; }
         .header-left strong { color: var(--color-blue); }
         .header-right { display: flex; gap: 20px; font-size: 0.9rem; color: #374151; align-items: center; }
 
         .content-scroll { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 20px; }
-
         .search-bar-container { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
         .search-input { flex: 0.6; display: flex; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-light); }
         .search-input input { border: none; outline: none; width: 100%; font-size: 1rem; margin-left: 10px; }
         .top-actions { display: flex; gap: 10px; }
-        .btn-outline { border: 2px solid var(--color-blue); color: var(--color-blue); background: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-outline { border: 2px solid var(--color-blue); color: var(--color-blue); background: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-outline:hover { background: var(--color-blue); color: white; }
 
         .categories { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
         .cat-btn { padding: 8px 16px; border-radius: 20px; border: none; color: white; font-weight: bold; cursor: pointer; white-space: nowrap; }
@@ -82,7 +80,7 @@
         .metric-item strong { display: block; font-size: 1.2rem; margin: 10px 0 5px; }
         .metric-item small { color: var(--text-secondary); }
 
-        /* --- RIGHT PANEL (VENTA ACTUAL) --- */
+        /* RIGHT PANEL (VENTA ACTUAL) */
         .right-panel { width: 380px; background: white; display: flex; flex-direction: column; border-left: 1px solid var(--border-light); box-shadow: -4px 0 15px rgba(0,0,0,0.03); }
         .panel-header { padding: 15px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
         
@@ -114,6 +112,10 @@
         .btn-guardar { background: var(--color-blue); flex: 1; }
         .btn-limpiar { background: var(--btn-orange); flex: 1; }
 
+        /* SCANNER MODAL / OVERLAY */
+        .scanner-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #reader { width: 400px; background: white; border-radius: 8px; overflow: hidden; }
+        .btn-close-scanner { margin-top: 20px; padding: 10px 20px; background: var(--btn-red); color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -122,6 +124,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // Productos locales (Fallback por si el backend falla o para botones rápidos)
         const initialProducts = [
             { id: 1, name: "Coca Cola 355ml", price: 1.25, stock: 48, cat: "BEBIDAS", img: "🥤" },
             { id: 2, name: "Pepsi 355ml", price: 1.25, stock: 36, cat: "BEBIDAS", img: "🥤" },
@@ -143,12 +146,130 @@
             const [search, setSearch] = useState("");
             const [cash, setCash] = useState("");
             const [currentTime, setCurrentTime] = useState(new Date());
+            const [isScanning, setIsScanning] = useState(false);
 
-            // Reloj en tiempo real
+            // 1. RELOJ EN TIEMPO REAL
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
                 return () => clearInterval(timer);
             }, []);
+
+            // 2. LÓGICA DE LA CÁMARA (Librería HTML5-QRCode)
+            useEffect(() => {
+                let html5QrcodeScanner;
+                if (isScanning) {
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false
+                    );
+                    html5QrcodeScanner.render(
+                        (decodedText) => {
+                            // Cuando lee un código con éxito
+                            html5QrcodeScanner.clear();
+                            setIsScanning(false);
+                            procesarCodigoBackend(decodedText);
+                        },
+                        (errorMessage) => { /* Ignoramos errores de cuadros vacíos */ }
+                    );
+                }
+                // Cleanup al cerrar la cámara
+                return () => {
+                    if (html5QrcodeScanner) {
+                        html5QrcodeScanner.clear().catch(e => console.error("Error limpiando cámara", e));
+                    }
+                };
+            }, [isScanning]);
+
+            // 3. LA MAGIA DEL FETCH (Conexión al Backend de Alfonso)
+            const procesarCodigoBackend = async (codigo) => {
+                try {
+                    // Aquí llamamos a la cocina
+                    const respuesta = await fetch(`http://localhost:5000/api/productos/${codigo}`);
+                    
+                    if (!respuesta.ok) {
+                        alert(`❌ Producto con código ${codigo} no encontrado en la Base de Datos.`);
+                        return;
+                    }
+                    
+                    const productoDB = await respuesta.json();
+                    
+                    // Adaptamos el producto de la BD a nuestro carrito
+                    const productoParaCarrito = {
+                        id: productoDB.codigo || codigo,
+                        name: productoDB.nombre,
+                        price: productoDB.precio,
+                        stock: productoDB.stock || 99,
+                        img: "📦" // Ícono por defecto para escaneados
+                    };
+                    
+                    addToCart(productoParaCarrito);
+                    alert(`✅ ${productoDB.nombre} agregado!`);
+                    
+                } catch (error) {
+                    console.error("Error fetch:", error);
+                    alert("⚠️ Error de red. ¿El Backend de Alfonso (puerto 5000) está encendido?");
+                }
+            };
+            // 4. LA MAGIA DEL POST (Registrar la venta en la Base de Datos)
+            const procesarVentaBackend = async () => {
+                // Validaciones de seguridad de caja
+                if (cart.length === 0) {
+                    alert("⚠️ El carrito está vacío. Escanea productos primero.");
+                    return;
+                }
+                if (change < 0) {
+                    alert("❌ Falta efectivo para cubrir el total de la compra.");
+                    return;
+                }
+
+                // Armamos el "Paquete" (Payload) con los datos exactos que Alfonso necesita
+                const payloadVenta = {
+                    total: total,
+                    pago: cashVal,
+                    cambio: change,
+                    cajero: "Administrador", // Esto luego lo tomaremos del Login
+                    productos: cart.map(item => ({
+                        codigo: item.id,
+                        cantidad: item.qty,
+                        precio_unitario: item.price,
+                        subtotal: item.price * item.qty
+                    }))
+                };
+
+                try {
+                    // Enviamos el paquete a la ruta que Alfonso creará para las ventas
+                    const respuesta = await fetch('http://localhost:5000/api/ventas', {
+                        method: 'POST', // POST significa "Insertar nueva información"
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payloadVenta) // Convertimos el paquete a texto JSON
+                    });
+
+                    // Si Alfonso nos responde con un error (Ej. No hay stock suficiente - PBI-021)
+                    if (!respuesta.ok) {
+                        const errorData = await respuesta.json();
+                        // Aquí es donde entraría la alerta para llamar al Supervisor
+                        alert(`❌ Venta rechazada: ${errorData.mensaje || 'Error en inventario'}`);
+                        return;
+                    }
+
+                    // Si la cocina dice "Todo perfecto, inventario descontado"
+                    alert("✅ ¡Cobro Exitoso! Inventario actualizado en la Base de Datos.");
+                    clearCart(); // Vaciamos el carrito para el siguiente cliente
+                    
+                } catch (error) {
+                    console.error("Error al registrar la venta:", error);
+                    alert("⚠️ Error de red. La venta no se guardó. ¿El Backend está encendido?");
+                }
+            };
+
+            // Para simular la lectura de pistola láser con el Input de búsqueda (Al presionar ENTER)
+            const handleSearchKeyPress = (e) => {
+                if (e.key === 'Enter' && search.trim() !== '') {
+                    procesarCodigoBackend(search.trim());
+                    setSearch(""); // Limpiamos el input después de leer
+                }
+            };
 
             // Lógica de Carrito
             const addToCart = (prod) => {
@@ -198,6 +319,15 @@
 
             return (
                 <div className="app-container">
+                    
+                    {/* OVERLAY DE LA CÁMARA */}
+                    {isScanning && (
+                        <div className="scanner-overlay">
+                            <div id="reader"></div>
+                            <button className="btn-close-scanner" onClick={() => setIsScanning(false)}>Cerrar Cámara ✖</button>
+                        </div>
+                    )}
+
                     {/* SIDEBAR */}
                     <aside className="sidebar">
                         <div className="sidebar-item active"><span className="icon">🛒</span> Ventas</div>
@@ -230,11 +360,17 @@
                             <div className="search-bar-container">
                                 <div className="search-input">
                                     <span>🔍</span>
-                                    <input type="text" placeholder="Buscar producto por nombre, código o barra..." value={search} onChange={e => setSearch(e.target.value)} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Buscar o escanear con láser (Enter para buscar en BD)..." 
+                                        value={search} 
+                                        onChange={e => setSearch(e.target.value)} 
+                                        onKeyDown={handleSearchKeyPress}
+                                    />
                                 </div>
                                 <div className="top-actions">
                                     <button className="btn-outline">⭐ FAVORITOS</button>
-                                    <button className="btn-outline">||||| ESCANEAR</button>
+                                    <button className="btn-outline" onClick={() => setIsScanning(true)}>||||| ESCANEAR</button>
                                 </div>
                             </div>
 
@@ -352,7 +488,7 @@
                                 ))}
                             </div>
                             <div className="action-buttons">
-                                <button className="action-btn btn-cobrar" onClick={() => { if(cart.length>0 && change>=0) alert("Cobro Exitoso!"); else alert("Falta efectivo o carrito vacío"); }}>COBRAR F9</button>
+                                <button className="action-btn btn-cobrar" onClick={procesarVentaBackend}>COBRAR F9</button>
                                 <button className="action-btn btn-guardar">GUARDAR F10</button>
                                 <button className="action-btn btn-limpiar" onClick={clearCart}>LIMPIAR F11</button>
                             </div>
