@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOFT POS - React</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        :root {
+            --bg-sidebar: #1a2332;
+            --sidebar-active: #2563eb;
+            --bg-main: #f1f5f9;
+            --color-blue: #2563eb;
+            --text-secondary: #64748b;
+            --border-light: #e2e8f0;
+            --btn-green: #16a34a;
+            --btn-orange: #f97316;
+            
+            --cat-todos: #3b82f6;
+            --cat-bebidas: #22c55e;
+            --cat-snacks: #f97316;
+            --cat-lacteos: #a855f7;
+            --cat-cuidado: #ec4899;
+            --cat-limpieza: #06b6d4;
+            --cat-otros: #6b7280;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { overflow: hidden; background-color: var(--bg-main); }
+
+        .app-container { display: flex; height: 100vh; width: 100vw; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 110px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+        .sidebar-item { width: 80%; padding: 15px 0; margin-bottom: 10px; text-align: center; cursor: pointer; border-radius: 8px; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: background 0.2s; }
+        .sidebar-item:hover { background-color: rgba(255,255,255,0.1); }
+        .sidebar-item.active { background-color: var(--sidebar-active); }
+        .sidebar-item span.icon { font-size: 1.5rem; }
+        .sidebar-spacer { flex: 1; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .header { height: 60px; background: white; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border-light); }
+        .header-left { display: flex; align-items: center; gap: 15px; font-size: 1.2rem; }
+        .header-left strong { color: var(--color-blue); }
+        .header-right { display: flex; gap: 20px; font-size: 0.9rem; color: #374151; align-items: center; }
+
+        .content-scroll { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+        .search-bar-container { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .search-input { flex: 0.6; display: flex; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-light); }
+        .search-input input { border: none; outline: none; width: 100%; font-size: 1rem; margin-left: 10px; }
+        .top-actions { display: flex; gap: 10px; }
+        .btn-outline { border: 2px solid var(--color-blue); color: var(--color-blue); background: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        .categories { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .cat-btn { padding: 8px 16px; border-radius: 20px; border: none; color: white; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
+        .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .product-card { background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-light); cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .product-card:active { transform: scale(0.98); }
+        .prod-img { width: 60px; height: 60px; background: #e2e8f0; border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
+        .prod-info { flex: 1; }
+        .prod-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
+        .prod-price { color: var(--color-blue); font-weight: bold; }
+        .prod-stock { color: var(--text-secondary); font-size: 0.8rem; margin-top: 3px; }
+
+        .bottom-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
+        .bottom-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border-light); }
+        .bottom-card h3 { margin-bottom: 15px; font-size: 1rem; color: #333; }
+        .top-list { list-style: none; }
+        .top-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        .top-list li span:last-child { color: var(--color-blue); font-weight: bold; }
+        
+        .metrics-grid { display: flex; justify-content: space-between; text-align: center; }
+        .metric-item span { display: block; font-size: 2rem; }
+        .metric-item strong { display: block; font-size: 1.2rem; margin: 10px 0 5px; }
+        .metric-item small { color: var(--text-secondary); }
+
+        /* --- RIGHT PANEL (VENTA ACTUAL) --- */
+        .right-panel { width: 380px; background: white; display: flex; flex-direction: column; border-left: 1px solid var(--border-light); box-shadow: -4px 0 15px rgba(0,0,0,0.03); }
+        .panel-header { padding: 15px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+        
+        .cart-table-container { flex: 1; overflow-y: auto; padding: 10px; }
+        .cart-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .cart-table th { text-align: left; padding: 10px; border-bottom: 2px solid var(--border-light); color: var(--text-secondary); }
+        .cart-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .qty-controls { display: flex; align-items: center; gap: 8px; }
+        .qty-btn { width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border-light); background: white; cursor: pointer; font-weight: bold; }
+        
+        .summary-section { padding: 15px 20px; border-top: 1px solid var(--border-light); background: #f8fafc; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.95rem; }
+        .total-row { font-size: 1.4rem; color: var(--color-blue); font-weight: bold; margin-top: 10px; }
+
+        .payment-section { padding: 15px 20px; border-top: 1px solid var(--border-light); }
+        .pay-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .pay-input { text-align: right; font-size: 1.5rem; padding: 5px; width: 120px; border: 1px solid var(--border-light); border-radius: 4px; }
+        .change-val { font-size: 1.5rem; font-weight: bold; }
+        .change-positive { color: var(--btn-green); }
+
+        .keypad-area { display: flex; gap: 10px; padding: 0 20px 20px; }
+        .numpad { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .num-btn { background: #f1f5f9; border: none; padding: 15px 0; border-radius: 6px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        .num-btn:active { background: #e2e8f0; }
+        
+        .action-buttons { display: flex; flex-direction: column; gap: 8px; width: 100px; }
+        .action-btn { border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-cobrar { background: var(--btn-green); flex: 2; font-size: 1.2rem; }
+        .btn-guardar { background: var(--color-blue); flex: 1; }
+        .btn-limpiar { background: var(--btn-orange); flex: 1; }
+
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const initialProducts = [
+            { id: 1, name: "Coca Cola 355ml", price: 1.25, stock: 48, cat: "BEBIDAS", img: "🥤" },
+            { id: 2, name: "Pepsi 355ml", price: 1.25, stock: 36, cat: "BEBIDAS", img: "🥤" },
+            { id: 3, name: "Agua Ciel 600ml", price: 0.75, stock: 60, cat: "BEBIDAS", img: "💧" },
+            { id: 4, name: "Jugo Del Valle 500ml", price: 1.10, stock: 30, cat: "BEBIDAS", img: "🧃" },
+            { id: 5, name: "Galletas Oreo 117g", price: 1.30, stock: 25, cat: "SNACKS", img: "🍪" },
+            { id: 6, name: "Papas Lays 42g", price: 1.00, stock: 40, cat: "SNACKS", img: "🥔" },
+            { id: 7, name: "Chocolate Snickers 50g", price: 1.15, stock: 50, cat: "SNACKS", img: "🍫" },
+            { id: 8, name: "Yogurt Danone 125g", price: 0.65, stock: 35, cat: "LÁCTEOS", img: "🥛" },
+            { id: 9, name: "Detergente Ariel 1kg", price: 3.75, stock: 15, cat: "LIMPIEZA", img: "🧼" },
+            { id: 10, name: "Shampoo H&S 400ml", price: 4.50, stock: 20, cat: "CUIDADO PERSONAL", img: "🧴" },
+            { id: 11, name: "Papel Higiénico Scott", price: 2.80, stock: 18, cat: "OTROS", img: "🧻" },
+            { id: 12, name: "Pan Bimbo Blanco", price: 2.25, stock: 22, cat: "OTROS", img: "🍞" }
+        ];
+
+        function App() {
+            const [cart, setCart] = useState([]);
+            const [category, setCategory] = useState("TODOS");
+            const [search, setSearch] = useState("");
+            const [cash, setCash] = useState("");
+            const [currentTime, setCurrentTime] = useState(new Date());
+
+            // Reloj en tiempo real
+            useEffect(() => {
+                const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Lógica de Carrito
+            const addToCart = (prod) => {
+                setCart(prev => {
+                    const existing = prev.find(item => item.id === prod.id);
+                    if (existing) {
+                        return prev.map(item => item.id === prod.id ? { ...item, qty: item.qty + 1 } : item);
+                    }
+                    return [...prev, { ...prod, qty: 1 }];
+                });
+            };
+
+            const updateQty = (id, delta) => {
+                setCart(prev => prev.map(item => {
+                    if (item.id === id) {
+                        const newQty = item.qty + delta;
+                        return { ...item, qty: newQty > 0 ? newQty : 1 };
+                    }
+                    return item;
+                }));
+            };
+
+            const remove = (id) => setCart(prev => prev.filter(item => item.id !== id));
+            const clearCart = () => { setCart([]); setCash(""); };
+
+            // Lógica Teclado Numérico
+            const handleNumpad = (val) => {
+                if (val === 'C') setCash("");
+                else if (val === '⌫') setCash(prev => prev.slice(0, -1));
+                else if (val === '.' && cash.includes('.')) return;
+                else setCash(prev => prev + val);
+            };
+
+            // Cálculos Matemáticos
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const tax = subtotal * 0.13;
+            const total = subtotal + tax;
+            const cashVal = parseFloat(cash) || 0;
+            const change = cashVal - total;
+
+            // Filtros de grid
+            const filteredProducts = initialProducts.filter(p => {
+                const matchCat = category === "TODOS" || p.cat === category;
+                const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+                return matchCat && matchSearch;
+            });
+
+            return (
+                <div className="app-container">
+                    {/* SIDEBAR */}
+                    <aside className="sidebar">
+                        <div className="sidebar-item active"><span className="icon">🛒</span> Ventas</div>
+                        <div className="sidebar-item"><span className="icon">📦</span> Productos</div>
+                        <div className="sidebar-item"><span className="icon">👥</span> Clientes</div>
+                        <div className="sidebar-item"><span className="icon">📊</span> Reportes</div>
+                        <div className="sidebar-item"><span className="icon">🗃️</span> Inventario</div>
+                        <div className="sidebar-item"><span className="icon">⚙️</span> Configuración</div>
+                        <div className="sidebar-spacer"></div>
+                        <div className="sidebar-item"><span className="icon">💬</span> Soporte</div>
+                    </aside>
+
+                    {/* MAIN CONTENT */}
+                    <main className="main-content">
+                        <header className="header">
+                            <div className="header-left">
+                                <span>☰</span>
+                                <span><strong>SOFT</strong> POS®</span>
+                            </div>
+                            <div className="header-right">
+                                <span>👤 Cajero: Administrador</span>
+                                <span>📅 {currentTime.toLocaleDateString('es-ES')}</span>
+                                <span>🕐 {currentTime.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</span>
+                                <span style={{cursor:'pointer'}}>🚪 Salir</span>
+                            </div>
+                        </header>
+
+                        <div className="content-scroll">
+                            {/* Búsqueda y Botones Top */}
+                            <div className="search-bar-container">
+                                <div className="search-input">
+                                    <span>🔍</span>
+                                    <input type="text" placeholder="Buscar producto por nombre, código o barra..." value={search} onChange={e => setSearch(e.target.value)} />
+                                </div>
+                                <div className="top-actions">
+                                    <button className="btn-outline">⭐ FAVORITOS</button>
+                                    <button className="btn-outline">||||| ESCANEAR</button>
+                                </div>
+                            </div>
+
+                            {/* Categorías */}
+                            <div className="categories">
+                                <button className="cat-btn" style={{background: 'var(--cat-todos)'}} onClick={() => setCategory('TODOS')}>TODOS</button>
+                                <button className="cat-btn" style={{background: 'var(--cat-bebidas)'}} onClick={() => setCategory('BEBIDAS')}>BEBIDAS</button>
+                                <button className="cat-btn" style={{background: 'var(--cat-snacks)'}} onClick={() => setCategory('SNACKS')}>SNACKS</button>
+                                <button className="cat-btn" style={{background: 'var(--cat-lacteos)'}} onClick={() => setCategory('LÁCTEOS')}>LÁCTEOS</button>
+                                <button className="cat-btn" style={{background: 'var(--cat-cuidado)'}} onClick={() => setCategory('CUIDADO PERSONAL')}>CUIDADO PERSONAL</button>
+                                <button className="cat-btn" style={{background: 'var(--cat-limpieza)'}} onClick={() => setCategory('LIMPIEZA')}>LIMPIEZA</button>
+                                <button className="cat-btn" style={{background: 'var(--cat-otros)'}} onClick={() => setCategory('OTROS')}>OTROS</button>
+                            </div>
+
+                            {/* Grid Productos */}
+                            <div className="product-grid">
+                                {filteredProducts.map(p => (
+                                    <div key={p.id} className="product-card" onClick={() => addToCart(p)}>
+                                        <div className="prod-img">{p.img}</div>
+                                        <div className="prod-info">
+                                            <div className="prod-name">{p.name}</div>
+                                            <div className="prod-price">${p.price.toFixed(2)}</div>
+                                            <div className="prod-stock">Stock: {p.stock}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Bottom Sections */}
+                            <div className="bottom-sections">
+                                <div className="bottom-card">
+                                    <h3>PRODUCTOS MÁS VENDIDOS</h3>
+                                    <ul className="top-list">
+                                        <li><span>1. Coca Cola 355ml</span> <span>120</span></li>
+                                        <li><span>2. Agua Ciel 600ml</span> <span>98</span></li>
+                                        <li><span>3. Galletas Oreo 117g</span> <span>75</span></li>
+                                        <li><span>4. Papas Lays 42g</span> <span>60</span></li>
+                                        <li><span>5. Pan Bimbo Blanco 680g</span> <span>55</span></li>
+                                    </ul>
+                                </div>
+                                <div className="bottom-card">
+                                    <h3>RESUMEN DEL DÍA</h3>
+                                    <div className="metrics-grid">
+                                        <div className="metric-item"><span>🛍️</span><strong>42</strong><small>Ventas</small></div>
+                                        <div className="metric-item"><span>💲</span><strong>$356.75</strong><small>Total Ventas</small></div>
+                                        <div className="metric-item"><span>🧾</span><strong>$8.49</strong><small>Ticket Promedio</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* RIGHT PANEL */}
+                    <aside className="right-panel">
+                        <div className="panel-header">
+                            <h2 style={{fontSize: '1.2rem'}}>VENTA ACTUAL</h2>
+                            <span style={{cursor:'pointer'}} onClick={clearCart}>🗑️</span>
+                        </div>
+                        
+                        <div className="cart-table-container">
+                            <table className="cart-table">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Precio</th>
+                                        <th>Cant.</th>
+                                        <th>Subtotal</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {cart.map(item => (
+                                        <tr key={item.id}>
+                                            <td>{item.name}</td>
+                                            <td>${item.price.toFixed(2)}</td>
+                                            <td>
+                                                <div className="qty-controls">
+                                                    <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>−</button>
+                                                    {item.qty}
+                                                    <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>+</button>
+                                                </div>
+                                            </td>
+                                            <td>${(item.price * item.qty).toFixed(2)}</td>
+                                            <td style={{cursor:'pointer', color:'var(--btn-orange)'}} onClick={() => remove(item.id)}>🗑️</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="summary-section">
+                            <div className="summary-row"><span>Subtotal:</span> <span>${subtotal.toFixed(2)}</span></div>
+                            <div className="summary-row"><span>Impuestos (13%):</span> <span>${tax.toFixed(2)}</span></div>
+                            <div className="summary-row total-row"><span>TOTAL:</span> <span>${total.toFixed(2)}</span></div>
+                        </div>
+
+                        <div className="payment-section">
+                            <h3 style={{marginBottom: '10px'}}>PAGO</h3>
+                            <div className="pay-row">
+                                <span style={{color: 'var(--text-secondary)'}}>Efectivo</span>
+                                <input type="text" className="pay-input" value={cash} readOnly placeholder="0.00" />
+                            </div>
+                            <div className="pay-row">
+                                <span style={{color: 'var(--text-secondary)'}}>Cambio:</span>
+                                <span className={`change-val ${change >= 0 && cart.length > 0 ? 'change-positive' : ''}`}>
+                                    ${cart.length > 0 ? Math.max(0, change).toFixed(2) : "0.00"}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="keypad-area">
+                            <div className="numpad">
+                                {['7','8','9','⌫','4','5','6','','1','2','3','','C','0','.',''].map((btn, i) => (
+                                    btn ? <button key={i} className="num-btn" onClick={() => handleNumpad(btn)}>{btn}</button> : <div key={i}></div>
+                                ))}
+                            </div>
+                            <div className="action-buttons">
+                                <button className="action-btn btn-cobrar" onClick={() => { if(cart.length>0 && change>=0) alert("Cobro Exitoso!"); else alert("Falta efectivo o carrito vacío"); }}>COBRAR F9</button>
+                                <button className="action-btn btn-guardar">GUARDAR F10</button>
+                                <button className="action-btn btn-limpiar" onClick={clearCart}>LIMPIAR F11</button>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
