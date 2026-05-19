@@ -25,21 +25,27 @@ btnCancelar.addEventListener('click', () => {
 });
 
 // Botón ENTRAR
-btnEntrar.addEventListener('click', () => {
+btnEntrar.addEventListener('click', async () => {
     const pin = pinInput.value;
-    if (pin === '') {
-        alert("Por favor, ingrese su PIN.");
-        return;
-    }
     
-    console.log("Validando PIN:", pin);
-    
-    // Simulación de acceso
-    if (pin === '1234') { 
-        alert("¡Acceso concedido Admin!");
-        // Aquí conectaremos con la pantalla de ventas
-    } else {
-        alert("PIN incorrecto.");
-        pinInput.value = ''; // Limpiar tras error
+    // En lugar de comparar pin === '1234', hacemos la petición al backend
+    try {
+        const response = await fetch('http://localhost:3000/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: pin })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`¡Bienvenido ${data.usuario}!`);
+            // Aquí Diego lo redirigiría a la pantalla de ventas
+        } else {
+            alert(data.error || "PIN incorrecto");
+            pinInput.value = '';
+        }
+    } catch (error) {
+        alert("Error de conexión con el servidor");
     }
 });
