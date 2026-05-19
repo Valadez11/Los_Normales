@@ -14,23 +14,45 @@ app.get('/', (req, res) => {
   res.send('API del Punto de Venta funcionando');
 });
 
-// 1. RUTA DE PRUEBA (Modificada para evitar errores de duplicado)
+// 1. RUTA DE PRUEBA
 app.get('/probar-db', (req, res) => {
   try {
-    // Usamos INSERT OR IGNORE para que no truene si el código 123456 ya existe
-    const insert = db.prepare('INSERT OR IGNORE INTO Producto (codigo_barras, nombre, precio_venta, existencia) VALUES (?, ?, ?, ?)');
-    insert.run('123456', 'Refresco de Cola', 15.50, 100);
+    // Insertamos producto de prueba
+    const insertProd = db.prepare('INSERT OR IGNORE INTO Producto (codigo_barras, nombre, precio_venta, existencia) VALUES (?, ?, ?, ?)');
+    insertProd.run('123456', 'Refresco de Cola', 15.50, 100);
+    
+    // Insertamos usuario de prueba (IMPORTANTE: Esto debe ir ANTES del res.json)
+    const insertUsuario = db.prepare('INSERT OR IGNORE INTO Usuarios (nombre, pin, rol) VALUES (?, ?, ?)');
+    insertUsuario.run('Admin', '1234', 'ADMIN');
     
     const productos = db.prepare('SELECT * FROM Producto').all();
-    res.json({ mensaje: "¡Motor listo!", productos });
+    const usuarios = db.prepare('SELECT nombre, rol FROM Usuarios').all();
+
+    res.json({ mensaje: "¡Motor listo!", productos, usuarios });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// --- AQUÍ EMPIEZAN LOS CAMBIOS NUEVOS ---
+// ==========================================
+// RUTA DE LOGIN (¡Esta es la que te faltaba!)
+// ==========================================
+app.post('/login', (req, res) => {
+    const { pin } = req.body;
+    try {
+        const usuario = db.prepare('SELECT nombre, rol FROM Usuarios WHERE pin = ?').get(pin);
+        
+        if (usuario) {
+            res.json({ mensaje: "Acceso concedido", usuario: usuario.nombre, rol: usuario.rol });
+        } else {
+            res.status(401).json({ error: "PIN no válido" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
-// 2. RUTA DE BÚSQUEDA (Para el lector de barras)
+// 2. RUTA DE BÚSQUEDA
 app.get('/productos/:codigo', (req, res) => {
     const { codigo } = req.params;
     try {
@@ -45,10 +67,9 @@ app.get('/productos/:codigo', (req, res) => {
     }
 });
 
-// 4. RUTA PARA AGREGAR O ACTUALIZAR PRODUCTOS
+// 3. RUTA PARA AGREGAR PRODUCTOS
 app.post('/productos', (req, res) => {
     const { codigo_barras, nombre, precio_venta, existencia } = req.body;
-
     try {
         const stmt = db.prepare(`
             INSERT INTO Producto (codigo_barras, nombre, precio_venta, existencia)
@@ -58,7 +79,6 @@ app.post('/productos', (req, res) => {
                 precio_venta = excluded.precio_venta,
                 existencia = Producto.existencia + excluded.existencia
         `);
-        
         stmt.run(codigo_barras, nombre, precio_venta, existencia);
         res.json({ mensaje: "Producto registrado/actualizado correctamente" });
     } catch (error) {
@@ -66,25 +86,20 @@ app.post('/productos', (req, res) => {
     }
 });
 
+// 4. RUTA DE VENTAS
 app.post('/ventas', (req, res) => {
     const { producto_id, cantidad, precio_unitario } = req.body;
-
     const crearVenta = db.transaction(() => {
-        // A. Registrar la cabecera
         const total = cantidad * precio_unitario;
         const infoVenta = db.prepare('INSERT INTO Ventas (total) VALUES (?)').run(total);
         const ventaId = infoVenta.lastInsertRowid;
-
-        // B. Registrar detalle (Esto dispara el descuento de stock automático)
         const stmtDetalle = db.prepare(`
             INSERT INTO Detalle_Ventas (venta_id, producto_id, cantidad, precio_unitario)
             VALUES (?, ?, ?, ?)
         `);
         stmtDetalle.run(ventaId, producto_id, cantidad, precio_unitario);
-
         return ventaId;
     });
-
     try {
         const idGenerado = crearVenta();
         res.json({ mensaje: "Venta registrada con éxito", venta_id: idGenerado });
@@ -92,8 +107,6 @@ app.post('/ventas', (req, res) => {
         res.status(500).json({ error: "Error en la venta: " + error.message });
     }
 });
-
-// --- FIN DE LOS CAMBIOS ---
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
