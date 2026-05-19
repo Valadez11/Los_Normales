@@ -58,6 +58,13 @@ const initDB = () => {
         INSERT INTO Movimiento_Inventario (producto_id, tipo, cantidad, motivo)
         VALUES (NEW.producto_id, 'SALIDA', NEW.cantidad, 'Venta registrada');
     END;
+
+    CREATE TABLE IF NOT EXISTS Usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    pin TEXT UNIQUE NOT NULL,
+    rol TEXT DEFAULT 'CAJERO'
+);
   `;
 
   try {
