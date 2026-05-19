@@ -131,7 +131,7 @@ app.post('/productos', (req, res) => {
 //         productos: [{ codigo, cantidad, precio_unitario }] }
 // ─────────────────────────────────────────────────────────────────
 app.post('/api/ventas', (req, res) => {
-  const { total, pago, cambio, cajero, productos } = req.body;
+  const { total, pago, cambio, cajero, productos, override_supervisor } = req.body;
 
   if (!productos || !Array.isArray(productos) || productos.length === 0) {
     return res.status(400).json({ mensaje: 'El carrito no puede estar vacío.' });
@@ -148,7 +148,7 @@ app.post('/api/ventas', (req, res) => {
   for (const item of productos) {
     const prod = db.prepare(
       `SELECT id, nombre, existencia FROM Producto
-       WHERE codigo_barras = ? OR CAST(id AS TEXT) = ?`
+      WHERE codigo_barras = ? OR CAST(id AS TEXT) = ?`
     ).get(String(item.codigo), String(item.codigo));
 
     if (!prod) {
@@ -167,7 +167,9 @@ app.post('/api/ventas', (req, res) => {
     }
   }
 
-  if (sinStock.length > 0) {
+  // Sin override: bloquear si hay stock insuficiente
+  // Con override_supervisor: registrar la venta aunque el stock quede negativo
+  if (sinStock.length > 0 && !override_supervisor) {
     return res.status(400).json({
       tipo:               'STOCK_INSUFICIENTE',
       mensaje:            'Uno o más productos no tienen suficiente existencia.',

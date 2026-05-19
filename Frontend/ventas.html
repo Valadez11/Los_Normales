@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOFT POS® - Punto de Venta</title>
-    <link rel="icon" type="image/png" href="SoftPos.png">
+    <link rel="icon" type="image/png" href="assets/SoftPos.png">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -652,6 +652,10 @@
             const [currentTime, setCurrentTime] = useState(new Date());
             const [isScanning, setIsScanning] = useState(false);
 
+            // ── Sesión activa — proviene del login (index.html) ──────────────
+            const usuario = sessionStorage.getItem('softpos_usuario') || 'Cajero';
+            const rol     = sessionStorage.getItem('softpos_rol')     || 'CAJERO';
+
             // Reloj en tiempo real en la cabecera
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -718,7 +722,7 @@
             };
 
             // POST Fetch - Transacción de liquidación e inventario
-            const procesarVentaBackend = async () => {
+            const procesarVentaBackend = async (override_supervisor = false) => {
                 if (cart.length === 0) {
                     alert("⚠️ El carrito de venta se encuentra vacío.");
                     return;
@@ -732,7 +736,8 @@
                     total: total,
                     pago: cashVal,
                     cambio: change,
-                    cajero: "Administrador",
+                    cajero: usuario,
+                    override_supervisor,
                     productos: cart.map(item => ({
                         codigo: item.id,
                         cantidad: item.qty,
@@ -750,20 +755,41 @@
 
                     if (!respuesta.ok) {
                         const errorData = await respuesta.json();
-                        alert(`❌ Venta declinada por el sistema: ${errorData.mensaje || 'Error de inventario'}`);
+
+                        // ── Override de Supervisor para stock insuficiente ────
+                        if (errorData.tipo === 'STOCK_INSUFICIENTE') {
+                            if (rol === 'SUPERVISOR' || rol === 'ADMIN') {
+                                const lista = errorData.productos_sin_stock
+                                    .map(p => `• ${p.nombre}: pedido ${p.cantidad_pedida}, disponible ${p.stock_disponible}`)
+                                    .join('\n');
+                                const autorizar = window.confirm(
+                                    `⚠️ OVERRIDE DE SUPERVISOR\n\nProductos sin existencia suficiente:\n${lista}\n\n¿Autorizar la venta de todas formas?`
+                                );
+                                if (autorizar) {
+                                    procesarVentaBackend(true); // Re-envía con flag de override
+                                }
+                            } else {
+                                alert("❌ Stock insuficiente. Solicita autorización a un Supervisor.");
+                            }
+                            return;
+                        }
+
+                        alert(`❌ Venta declinada: ${errorData.mensaje || 'Error de inventario'}`);
                         return;
                     }
 
+                    // ── Éxito ─────────────────────────────────────────────────
                     alert("✅ Registro exitoso. Inventario deducido correctamente.");
-                    window.print(); // Dispara impresión física al recibir confirmación del servidor
+                    window.print(); // Solo dispara en confirmación real del servidor
                     clearCart();
-                    
+
                 } catch (error) {
                     console.error("Fallo de comunicación POST:", error);
-                    const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Deseas forzar la impresión del comprobante de venta de forma local?");
-                    
+                    const forzarImpresionLocal = window.confirm(
+                        "⚠️ Servidor local no detectado.\n¿Deseas forzar la impresión del comprobante de forma local?"
+                    );
                     if (forzarImpresionLocal) {
-                        window.print(); // Ejecuta impresión local como contingencia operativa
+                        window.print();
                         clearCart();
                     }
                 }
@@ -848,10 +874,10 @@
                                 <span><strong>SOFT</strong> POS®</span>
                             </div>
                             <div className="header-right">
-                                <span>👤 Cajero: Administrador</span>
-                                <span>📅 20/05/2024</span>
+                                <span>👤 {usuario} {rol === 'SUPERVISOR' || rol === 'ADMIN' ? '⭐' : ''}</span>
+                                <span>📅 {currentTime.toLocaleDateString('es-ES')}</span>
                                 <span>🕐 {currentTime.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</span>
-                                <span style={{cursor:'pointer'}}>🚪 Salir</span>
+                                <span style={{cursor:'pointer'}} onClick={() => { sessionStorage.clear(); window.location.href = 'index.html'; }}>🚪 Salir</span>
                             </div>
                         </header>
 
@@ -1005,7 +1031,7 @@
                         <h2>SOFT POS®</h2>
                         <p>Sucursal Principal</p>
                         <p>Fecha: {currentTime.toLocaleDateString('es-ES')} {currentTime.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</p>
-                        <p>Cajero: Administrador</p>
+                        <p>Cajero: {usuario}</p>
                         <div className="divider"></div>
                         
                         <table>
