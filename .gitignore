@@ -1,3 +1,17 @@
+# ── Node.js ──────────────────────────────
+node_modules/
+npm-debug.log*
+.env
+
+# Base de datos SQLite (archivo de runtime, no va en el repo)
+*.db
+*.db-shm
+*.db-wal
+
+# Archivos de borrador generados por Claude
+PBI-021_*.js
+
+# ── Java (plantilla original) ─────────────
 # Compiled class file
 *.class
 
