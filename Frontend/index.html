@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOFT POS® - Inicio de Sesión</title>
+    <link rel="icon" type="image/png" href="assets/SoftPos.png">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -259,20 +260,33 @@
                 setPin("");
             };
 
-            const handleLogin = () => {
+            const handleLogin = async () => {
                 if (pin === "") {
                     alert("⚠️ Por favor ingresa tu contraseña de acceso.");
                     return;
                 }
 
-                if (pin === "1234") {
-                    // FIX ROBUSTO IMPLEMENTADO:
-                    window.location.href = "ventas.html";
+                try {
+                    const response = await fetch('http://localhost:5000/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pin })
+                    });
 
+                    const data = await response.json();
 
-                } else {
-                    alert("❌ Contraseña incorrecta. Contacta a un administrador.");
-                    setPin(""); 
+                    if (response.ok) {
+                        // Guardar sesión para ventas.html
+                        sessionStorage.setItem('softpos_usuario', data.usuario);
+                        sessionStorage.setItem('softpos_rol', data.rol);
+                        window.location.href = "ventas.html";
+                    } else {
+                        alert("❌ PIN incorrecto. Contacta a un administrador.");
+                        setPin("");
+                    }
+                } catch (error) {
+                    alert("⚠️ No se puede conectar al servidor.\nVerifica que el backend esté activo en puerto 5000.");
+                    setPin("");
                 }
             };
 

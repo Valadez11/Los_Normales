@@ -64,6 +64,13 @@ const initDB = () => {
         INSERT INTO Movimiento_Inventario (producto_id, tipo, cantidad, motivo)
         VALUES (NEW.producto_id, 'SALIDA', NEW.cantidad, 'Venta registrada');
     END;
+
+    CREATE TABLE IF NOT EXISTS Usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    pin TEXT UNIQUE NOT NULL,
+    rol TEXT DEFAULT 'CAJERO'
+);
   `;
 
   try {
@@ -71,6 +78,17 @@ const initDB = () => {
     console.log("✅ Base de datos, Tablas y Triggers configurados con éxito.");
   } catch (err) {
     console.error("❌ Error al inicializar la base de datos:", err.message);
+  }
+
+  // Migración: columnas adicionales en Ventas (se ignoran si ya existen)
+  const migracionesVentas = [
+    'ALTER TABLE Ventas ADD COLUMN subtotal REAL',
+    'ALTER TABLE Ventas ADD COLUMN impuestos REAL',
+    'ALTER TABLE Ventas ADD COLUMN efectivo_recibido REAL',
+    'ALTER TABLE Ventas ADD COLUMN cambio REAL',
+  ];
+  for (const sql of migracionesVentas) {
+    try { db.exec(sql); } catch (_) { /* columna ya existe — ignorar */ }
   }
 };
 

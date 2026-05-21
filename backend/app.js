@@ -21,19 +21,19 @@ app.get('/', (req, res) => {
   res.send('API del Punto de Venta funcionando');
 });
 
-// 1. RUTA DE PRUEBA: SIEMBRA MASIVA REPARADA
+/// 1. RUTA DE PRUEBA: SIEMBRA MASIVA DE PRODUCTOS
 app.get('/probar-db', (req, res) => {
     try {
-        // Limpiamos en orden para evitar errores de Foreign Key
-        db.prepare('DELETE FROM Detalle_Ventas').run();
-        db.prepare('DELETE FROM Ventas').run();
+        // Limpiamos la tabla para no duplicar datos ni violar restricciones
         db.prepare('DELETE FROM Producto').run();
         
+        // Preparamos el insertador
         const stmt = db.prepare(`
             INSERT INTO Producto (id, codigo_barras, nombre, precio_venta, existencia)
             VALUES (?, ?, ?, ?, ?)
         `);
 
+        // Insertamos uno por uno los 12 productos estáticos del Frontend
         stmt.run(1, '123456', 'Coca Cola 355ml', 1.25, 48);
         stmt.run(2, '123457', 'Pepsi 355ml', 1.25, 36);
         stmt.run(3, '123458', 'Agua Ciel 600ml', 0.75, 60);
@@ -47,11 +47,13 @@ app.get('/probar-db', (req, res) => {
         stmt.run(11, '123466', 'Papel Higiénico Scott', 2.80, 18);
         stmt.run(12, '123467', 'Pan Bimbo Blanco', 2.25, 22);
 
+        // Verificamos qué se guardó
         const todosLosProductos = db.prepare('SELECT * FROM Producto').all();
 
         res.json({
-            mensaje: "¡Base de datos limpia y sincronizada con el Frontend!",
-            total_productos: todosLosProductos.length
+            mensaje: "¡Base de datos sincronizada con el Frontend con éxito!",
+            total_productos: todosLosProductos.length,
+            productos: todosLosProductos
         });
     } catch (err) {
         res.status(500).json({ error: "Error al sembrar el inventario: " + err.message });
@@ -112,42 +114,35 @@ app.post('/productos', (req, res) => {
 });
 
 
-// 4. RUTA DE VENTAS MEJORADA DESDE EL BACKEND
+// 4. RUTA DE VENTAS BLINDADA CONTRA APAGONES
 app.post('/ventas', (req, res) => {
     const { productos, total } = req.body; 
 
-    console.log("📦 CONTENIDO DEL CARRITO RECIBIDO:", productos);
+    console.log("CONTENIDO DEL CARRITO RECIBIDO: ", productos);
 
     if (!productos || productos.length === 0) {
         return res.status(400).json({ error: "El carrito está vacío" });
     }
 
     try {
+        // Metemos la transacción dentro del bloque try para que si falla un ID, NO tire el servidor
         const transaccionVenta = db.transaction(() => {
-            // 1. Insertar la cabecera de la venta
+            // 1. Insertar la cabecera
             const infoVenta = db.prepare('INSERT INTO Ventas (total) VALUES (?)').run(total);
             const ventaId = infoVenta.lastInsertRowid;
 
-            // Consultas listas para el ciclo
-            const buscarDetalle = db.prepare('SELECT cantidad FROM Detalle_Ventas WHERE venta_id = ? AND producto_id = ?');
-            const actualizarDetalle = db.prepare('UPDATE Detalle_Ventas SET cantidad = cantidad + ? WHERE venta_id = ? AND producto_id = ?');
-            const insertarDetalle = db.prepare('INSERT INTO Detalle_Ventas (venta_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)');
+            // Preparamos el comando para los detalles
+            const stmtDetalle = db.prepare(`
+                INSERT INTO Detalle_Ventas (venta_id, producto_id, cantidad, precio_unitario)
+                VALUES (?, ?, ?, ?)
+            `);
 
             // 2. Recorrer el carrito
             for (const prod of productos) {
-                const cantidadReal = prod.cantidad || 1; // Parche por si viene vacío
-                const precioReal = prod.precio || 0.0;
                 
-                // Comprobamos si el producto ya se metió previamente en esta misma venta
-                const filaExiste = buscarDetalle.get(ventaId, prod.id);
-
-                if (filaExiste) {
-                    // Si ya existe en la venta actual, sólo sumamos la cantidad
-                    actualizarDetalle.run(cantidadReal, ventaId, prod.id);
-                } else {
-                    // Si es la primera vez que aparece en esta venta, lo insertamos normal
-                    insertarDetalle.run(ventaId, prod.id, cantidadReal, precioReal);
-                }
+                const cantidadReal = prod.cantidad || 1; // esto para pruebas y que truene la base
+                // Si prod.id es undefined o no existe en la tabla Producto, saltará un error aquí
+                stmtDetalle.run(ventaId, prod.id, cantidadReal, prod.precio);
             }
 
             return ventaId;
@@ -157,12 +152,14 @@ app.post('/ventas', (req, res) => {
         res.json({ mensaje: "Venta registrada con éxito", venta_id: idGenerado });
 
     } catch (error) {
+        // En lugar de morir, el servidor atrapa el error aquí y sigue vivo
         console.error("❌ Error controlado en venta:", error.message);
         res.status(500).json({ 
-            error: "La venta no se pudo procesar. Detalle: " + error.message 
+            error: "La venta no se pudo procesar. Verifique que los IDs de los productos existan en la base de datos. Detalle: " + error.message 
         });
     }
 });
+
 // MODIFICACIÓN PARA IMPRIMIR EL PUERTO REAL
 app.listen(PORT, '127.0.0.1', () => {
     console.log(`==================================================`);

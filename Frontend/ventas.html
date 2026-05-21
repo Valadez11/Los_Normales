@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOFT POS® - Punto de Venta</title>
+    <link rel="icon" type="image/png" href="assets/SoftPos.png">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -651,6 +652,10 @@
             const [currentTime, setCurrentTime] = useState(new Date());
             const [isScanning, setIsScanning] = useState(false);
 
+            // ── Sesión activa — proviene del login (index.html) ──────────────
+            const usuario = sessionStorage.getItem('softpos_usuario') || 'Cajero';
+            const rol     = sessionStorage.getItem('softpos_rol')     || 'CAJERO';
+
             // Reloj en tiempo real en la cabecera
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -717,12 +722,36 @@
             };
 
             // POST Fetch - Transacción de liquidación e inventario
+<<<<<<< HEAD
             const procesarVentaBackend = async () => {
                 const payloadVenta = {
                     total: total, 
                     productos:cart.map(item => ({
                         id: item.qty,
                         precio: item.price
+=======
+            const procesarVentaBackend = async (override_supervisor = false) => {
+                if (cart.length === 0) {
+                    alert("⚠️ El carrito de venta se encuentra vacío.");
+                    return;
+                }
+                if (change < 0) {
+                    alert("❌ Dinero en efectivo insuficiente para procesar la transacción.");
+                    return;
+                }
+
+                const payloadVenta = {
+                    total: total,
+                    pago: cashVal,
+                    cambio: change,
+                    cajero: usuario,
+                    override_supervisor,
+                    productos: cart.map(item => ({
+                        codigo: item.id,
+                        cantidad: item.qty,
+                        precio_unitario: item.price,
+                        subtotal: item.price * item.qty
+>>>>>>> 2f1d8437fb0f750fe2dc8248e110169714bdd25a
                     }))
                 };
 
@@ -733,6 +762,7 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(payloadVenta)
                     });
+<<<<<<< HEAD
                     
                     if (respuesta.ok) {
                         alert("✅ Registro existoso. ¡Inventario deducido correctamente en la base de datos!");
@@ -749,6 +779,45 @@
 
                     const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Desea forzar la impresión del comprobante de forma local?");
                     if(forzarImpresionLocal) {
+=======
+
+                    if (!respuesta.ok) {
+                        const errorData = await respuesta.json();
+
+                        // ── Override de Supervisor para stock insuficiente ────
+                        if (errorData.tipo === 'STOCK_INSUFICIENTE') {
+                            if (rol === 'SUPERVISOR' || rol === 'ADMIN') {
+                                const lista = errorData.productos_sin_stock
+                                    .map(p => `• ${p.nombre}: pedido ${p.cantidad_pedida}, disponible ${p.stock_disponible}`)
+                                    .join('\n');
+                                const autorizar = window.confirm(
+                                    `⚠️ OVERRIDE DE SUPERVISOR\n\nProductos sin existencia suficiente:\n${lista}\n\n¿Autorizar la venta de todas formas?`
+                                );
+                                if (autorizar) {
+                                    procesarVentaBackend(true); // Re-envía con flag de override
+                                }
+                            } else {
+                                alert("❌ Stock insuficiente. Solicita autorización a un Supervisor.");
+                            }
+                            return;
+                        }
+
+                        alert(`❌ Venta declinada: ${errorData.mensaje || 'Error de inventario'}`);
+                        return;
+                    }
+
+                    // ── Éxito ─────────────────────────────────────────────────
+                    alert("✅ Registro exitoso. Inventario deducido correctamente.");
+                    window.print(); // Solo dispara en confirmación real del servidor
+                    clearCart();
+
+                } catch (error) {
+                    console.error("Fallo de comunicación POST:", error);
+                    const forzarImpresionLocal = window.confirm(
+                        "⚠️ Servidor local no detectado.\n¿Deseas forzar la impresión del comprobante de forma local?"
+                    );
+                    if (forzarImpresionLocal) {
+>>>>>>> 2f1d8437fb0f750fe2dc8248e110169714bdd25a
                         window.print();
                         clearCart();
                     }
@@ -834,10 +903,10 @@
                                 <span><strong>SOFT</strong> POS®</span>
                             </div>
                             <div className="header-right">
-                                <span>👤 Cajero: Administrador</span>
-                                <span>📅 20/05/2024</span>
+                                <span>👤 {usuario} {rol === 'SUPERVISOR' || rol === 'ADMIN' ? '⭐' : ''}</span>
+                                <span>📅 {currentTime.toLocaleDateString('es-ES')}</span>
                                 <span>🕐 {currentTime.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</span>
-                                <span style={{cursor:'pointer'}}>🚪 Salir</span>
+                                <span style={{cursor:'pointer'}} onClick={() => { sessionStorage.clear(); window.location.href = 'index.html'; }}>🚪 Salir</span>
                             </div>
                         </header>
 
@@ -991,7 +1060,7 @@
                         <h2>SOFT POS®</h2>
                         <p>Sucursal Principal</p>
                         <p>Fecha: {currentTime.toLocaleDateString('es-ES')} {currentTime.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</p>
-                        <p>Cajero: Administrador</p>
+                        <p>Cajero: {usuario}</p>
                         <div className="divider"></div>
                         
                         <table>
