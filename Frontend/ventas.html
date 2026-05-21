@@ -718,55 +718,42 @@
 
             // POST Fetch - Transacción de liquidación e inventario
             const procesarVentaBackend = async () => {
-                if (cart.length === 0) {
-                    alert("⚠️ El carrito de venta se encuentra vacío.");
-                    return;
-                }
-                if (change < 0) {
-                    alert("❌ Dinero en efectivo insuficiente para procesar la transacción.");
-                    return;
-                }
-
                 const payloadVenta = {
-                    total: total,
-                    pago: cashVal,
-                    cambio: change,
-                    cajero: "Administrador",
-                    productos: cart.map(item => ({
-                        codigo: item.id,
-                        cantidad: item.qty,
-                        precio_unitario: item.price,
-                        subtotal: item.price * item.qty
+                    total: total, 
+                    productos:cart.map(item => ({
+                        id: item.qty,
+                        precio: item.price
                     }))
                 };
 
                 try {
-                    const respuesta = await fetch('http://localhost:5000/api/ventas', {
+
+                    const respuesta = await fetch('http://127.0.0.1:3000/ventas', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(payloadVenta)
                     });
-
-                    if (!respuesta.ok) {
-                        const errorData = await respuesta.json();
-                        alert(`❌ Venta declinada por el sistema: ${errorData.mensaje || 'Error de inventario'}`);
+                    
+                    if (respuesta.ok) {
+                        alert("✅ Registro existoso. ¡Inventario deducido correctamente en la base de datos!");
+                        window.print();
+                        clearCart();
                         return;
                     }
 
-                    alert("✅ Registro exitoso. Inventario deducido correctamente.");
-                    window.print(); // Dispara impresión física al recibir confirmación del servidor
-                    clearCart();
-                    
+                    const errorData = await respuesta.json();
+                    alert(`❌ Venta declinada por el sistema: ${errorData.error || "Error de inventario"}`); 
+
                 } catch (error) {
                     console.error("Fallo de comunicación POST:", error);
-                    const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Deseas forzar la impresión del comprobante de venta de forma local?");
-                    
-                    if (forzarImpresionLocal) {
-                        window.print(); // Ejecuta impresión local como contingencia operativa
+
+                    const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Desea forzar la impresión del comprobante de forma local?");
+                    if(forzarImpresionLocal) {
+                        window.print();
                         clearCart();
                     }
                 }
-            };
+            }
 
             // Gestión reactiva del estado del Carrito
             const addToCart = (prod) => {

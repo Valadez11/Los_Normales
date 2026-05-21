@@ -15,6 +15,14 @@ const initDB = () => {
       existencia REAL DEFAULT 0
     );
 
+    -- ⚠️ ¡ESTA ES LA TABLA QUE TE FALTABA!
+    CREATE TABLE IF NOT EXISTS Usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      pin TEXT UNIQUE NOT NULL,
+      rol TEXT CHECK(rol IN ('ADMIN', 'CAJERO')) NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS Ventas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -42,7 +50,6 @@ const initDB = () => {
     );
 
     -- 2. TRIGGERS (DISPARADORES)
-    -- Este resta la existencia del producto automáticamente al vender
     CREATE TRIGGER IF NOT EXISTS actualizar_stock_post_venta
     AFTER INSERT ON Detalle_Ventas
     BEGIN
@@ -51,7 +58,6 @@ const initDB = () => {
         WHERE id = NEW.producto_id;
     END;
 
-    -- Este registra el movimiento en el historial para auditoría
     CREATE TRIGGER IF NOT EXISTS registrar_movimiento_venta
     AFTER INSERT ON Detalle_Ventas
     BEGIN
@@ -62,7 +68,7 @@ const initDB = () => {
 
   try {
     db.exec(schema);
-    console.log("✅ Base de datos y Triggers configurados con éxito.");
+    console.log("✅ Base de datos, Tablas y Triggers configurados con éxito.");
   } catch (err) {
     console.error("❌ Error al inicializar la base de datos:", err.message);
   }
