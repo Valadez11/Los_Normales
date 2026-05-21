@@ -721,108 +721,82 @@
                 }
             };
 
-            // POST Fetch - Transacción de liquidación e inventario
-<<<<<<< HEAD
-            const procesarVentaBackend = async () => {
-                const payloadVenta = {
-                    total: total, 
-                    productos:cart.map(item => ({
-                        id: item.qty,
-                        precio: item.price
-=======
             const procesarVentaBackend = async (override_supervisor = false) => {
                 if (cart.length === 0) {
-                    alert("⚠️ El carrito de venta se encuentra vacío.");
-                    return;
-                }
-                if (change < 0) {
-                    alert("❌ Dinero en efectivo insuficiente para procesar la transacción.");
-                    return;
+                 alert("⚠️ El carrito de venta se encuentra vacío.");
+                 return;
                 }
 
+                if (change < 0) {
+                 alert("❌ Dinero en efectivo insuficiente para procesar la transacción.");
+                return;
+                }
+
+                // Armamos el paquete de datos unificado
                 const payloadVenta = {
                     total: total,
                     pago: cashVal,
                     cambio: change,
                     cajero: usuario,
-                    override_supervisor,
+                    override_supervisor: override_supervisor,
+                    // Mapeamos el carrito asegurando los nombres que tu backend necesita (id, cantidad, precio)
                     productos: cart.map(item => ({
-                        codigo: item.id,
-                        cantidad: item.qty,
-                        precio_unitario: item.price,
-                        subtotal: item.price * item.qty
->>>>>>> 2f1d8437fb0f750fe2dc8248e110169714bdd25a
+                        id: item.id,
+                        cantidad: item.qty || 1, // Enviamos qty mapeado como cantidad
+                        precio: item.price
                     }))
                 };
 
                 try {
+                // Tu Fetch blindado apuntando al backend
+                const respuesta = await fetch('http://127.0.0.1:3000/ventas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadVenta)
+                });
 
-                    const respuesta = await fetch('http://127.0.0.1:3000/ventas', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payloadVenta)
-                    });
-<<<<<<< HEAD
-                    
-                    if (respuesta.ok) {
-                        alert("✅ Registro existoso. ¡Inventario deducido correctamente en la base de datos!");
-                        window.print();
-                        clearCart();
-                        return;
-                    }
-
-                    const errorData = await respuesta.json();
-                    alert(`❌ Venta declinada por el sistema: ${errorData.error || "Error de inventario"}`); 
-
-                } catch (error) {
-                    console.error("Fallo de comunicación POST:", error);
-
-                    const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Desea forzar la impresión del comprobante de forma local?");
-                    if(forzarImpresionLocal) {
-=======
-
-                    if (!respuesta.ok) {
-                        const errorData = await respuesta.json();
-
-                        // ── Override de Supervisor para stock insuficiente ────
-                        if (errorData.tipo === 'STOCK_INSUFICIENTE') {
-                            if (rol === 'SUPERVISOR' || rol === 'ADMIN') {
-                                const lista = errorData.productos_sin_stock
-                                    .map(p => `• ${p.nombre}: pedido ${p.cantidad_pedida}, disponible ${p.stock_disponible}`)
-                                    .join('\n');
-                                const autorizar = window.confirm(
-                                    `⚠️ OVERRIDE DE SUPERVISOR\n\nProductos sin existencia suficiente:\n${lista}\n\n¿Autorizar la venta de todas formas?`
-                                );
-                                if (autorizar) {
-                                    procesarVentaBackend(true); // Re-envía con flag de override
-                                }
-                            } else {
-                                alert("❌ Stock insuficiente. Solicita autorización a un Supervisor.");
-                            }
-                            return;
-                        }
-
-                        alert(`❌ Venta declinada: ${errorData.mensaje || 'Error de inventario'}`);
-                        return;
-                    }
-
-                    // ── Éxito ─────────────────────────────────────────────────
-                    alert("✅ Registro exitoso. Inventario deducido correctamente.");
-                    window.print(); // Solo dispara en confirmación real del servidor
+                if (respuesta.ok) {
+                    alert("✨ Registro exitoso. ¡Inventario deducido correctamente en la base de datos!");
+                    window.print();
                     clearCart();
+                    return;
+                }
 
-                } catch (error) {
-                    console.error("Fallo de comunicación POST:", error);
-                    const forzarImpresionLocal = window.confirm(
-                        "⚠️ Servidor local no detectado.\n¿Deseas forzar la impresión del comprobante de forma local?"
-                    );
-                    if (forzarImpresionLocal) {
->>>>>>> 2f1d8437fb0f750fe2dc8248e110169714bdd25a
-                        window.print();
-                        clearCart();
+                 // Manejo de errores avanzados de Diego (Ej: Stock Insuficiente)
+                const errorData = await respuesta.json();
+
+                if (errorData.tipo === 'STOCK_INSUFICIENTE') {
+                    if (rol === 'SUPERVISOR' || rol === 'ADMIN') {
+                        const lista = errorData.productos_sin_stock
+                            .map(p => `• ${p.nombre}: pedido ${p.cantidad_pedida}, disponible ${p.stock_disponible}`)
+                            .join('\n');
+
+                        const autorizar = window.confirm(
+                            `⚠️ OVERRIDE DE SUPERVISOR\n\nProductos sin existencia suficiente:\n${lista}\n\n¿Autorizar la venta de todas formas?`
+                        );
+                
+                        if (autorizar) {
+                            procesarVentaBackend(true); // Re-envía con la bandera de override
+                        }
+                    } else {
+                        alert("❌ Stock insuficiente. Solicita autorización a un Supervisor.");
                     }
+                    return;
+                }
+
+                alert(`❌ Venta declinada por el sistema: ${errorData.error || 'Error de inventario'}`);
+
+            } catch (error) {
+                console.error("Fallo de comunicación POST:", error);
+        
+                // La alerta local que tenías en tu pantalla
+                const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Desea forzar la impresión del comprobante de forma local?");
+                if (forzarImpresionLocal) {
+                    window.print();
+                    clearCart();
                 }
             }
+        };
 
             // Gestión reactiva del estado del Carrito
             const addToCart = (prod) => {
