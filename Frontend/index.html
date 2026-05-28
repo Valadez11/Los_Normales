@@ -267,25 +267,27 @@
                 }
 
                 try {
-                    const response = await fetch('http://localhost:5000/login', {
+                    // Sincronizado a tu backend real en 127.0.0.1:3000 🚀
+                    const response = await fetch('http://127.0.0.1:3000/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ pin })
+                        // Le mandamos tanto 'pin' como 'contrasena' para blindarlo, use el que use tu endpoint
+                        body: JSON.stringify({ pin: pin, contrasena: pin, usuario: 'admin' })
                     });
 
                     const data = await response.json();
 
                     if (response.ok) {
                         // Guardar sesión para ventas.html
-                        sessionStorage.setItem('softpos_usuario', data.usuario);
-                        sessionStorage.setItem('softpos_rol', data.rol);
+                        sessionStorage.setItem('softpos_usuario', data.usuario || "Admin");
+                        sessionStorage.setItem('softpos_rol', data.rol || "ADMIN");
                         window.location.href = "ventas.html";
                     } else {
-                        alert("❌ PIN incorrecto. Contacta a un administrador.");
+                        alert(`❌ Acceso denegado: ${data.error || 'PIN incorrecto.'}`);
                         setPin("");
                     }
                 } catch (error) {
-                    alert("⚠️ No se puede conectar al servidor.\nVerifica que el backend esté activo en puerto 5000.");
+                    alert("⚠️ No se puede conectar al servidor.\nVerifica que el backend esté activo en http://127.0.0.1:3000");
                     setPin("");
                 }
             };

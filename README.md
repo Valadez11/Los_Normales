@@ -50,6 +50,25 @@ Webapp de punto de venta diseñada para operar en red local (LAN). Permite regis
 
 ---
 
+## 🚀 Instrucciones para la Revisión Local
+
+Para ejecutar el proyecto correctamente y probar las funciones de inicio de sesión, registro de ventas e inventario, siga los siguientes pasos:
+
+### 1. Requisitos Previos
+* Tener instalado [Node.js](https://nodejs.org/) (Versión 16 o superior recomendado).
+* Contar con la extensión **Live Server** en VS Code (o un servidor HTTP local).
+
+### 2. Configuración del Backend
+Abra una terminal en la raíz de la carpeta del proyecto y ejecute los siguientes comandos:
+
+```bash
+# 1. Instalar todas las dependencias necesarias
+npm install
+
+# 2. Iniciar el servidor de Node.js
+node app.js
+
+
 ## Instalación y Arranque
 
 ### Requisitos

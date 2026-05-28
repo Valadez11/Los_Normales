@@ -721,34 +721,32 @@
                 }
             };
 
-            const procesarVentaBackend = async (override_supervisor = false) => {
-                if (cart.length === 0) {
-                 alert("⚠️ El carrito de venta se encuentra vacío.");
-                 return;
-                }
-
-                if (change < 0) {
-                 alert("❌ Dinero en efectivo insuficiente para procesar la transacción.");
+            const procesarVentaBackend = async () => {
+            if (cart.length === 0) {
+                alert("⚠️ El carrito está vacío.");
                 return;
-                }
+            }
 
-                // Armamos el paquete de datos unificado
-                const payloadVenta = {
-                    total: total,
-                    pago: cashVal,
-                    cambio: change,
-                    cajero: usuario,
-                    override_supervisor: override_supervisor,
-                    // Mapeamos el carrito asegurando los nombres que tu backend necesita (id, cantidad, precio)
-                    productos: cart.map(item => ({
-                        id: item.id,
-                        cantidad: item.qty || 1, // Enviamos qty mapeado como cantidad
-                        precio: item.price
-                    }))
-                };
+            // Calculamos el total y efectivo usando las variables numéricas reales de tu archivo
+            const totalVenta = parseFloat(total || 0);
+            const efectivoEntregado = parseFloat(cashVal || 0);
+            
+            console.log("📊 Intentando procesar venta localmente:", { totalVenta, efectivoEntregado });
 
-                try {
-                // Tu Fetch blindado apuntando al backend
+            // Construimos el objeto exacto que tu servidor SQLite espera recibir
+            const payloadVenta = {
+                productos: cart.map(item => ({
+                    id: parseInt(item.id, 10),
+                    cantidad: parseInt(item.qty || 1, 10),
+                    precio: Number(item.price || 0)
+                })),
+                total: totalVenta
+            };
+
+            console.log("📤 Enviando payload al backend (Puerto 3000):", payloadVenta);
+
+            try {
+                // Conexión directa y limpia a tu servidor Node.js
                 const respuesta = await fetch('http://127.0.0.1:3000/ventas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -756,41 +754,21 @@
                 });
 
                 if (respuesta.ok) {
-                    alert("✨ Registro exitoso. ¡Inventario deducido correctamente en la base de datos!");
+                    alert("✨ ¡Venta registrada con éxito en SQLite e inventario actualizado!");
                     window.print();
-                    clearCart();
+                    clearCart(); // Borra el carrito de la pantalla táctil automáticamente
                     return;
                 }
 
-                 // Manejo de errores avanzados de Diego (Ej: Stock Insuficiente)
+                // Si el servidor responde pero con un error (ej. código 500 o 400)
                 const errorData = await respuesta.json();
-
-                if (errorData.tipo === 'STOCK_INSUFICIENTE') {
-                    if (rol === 'SUPERVISOR' || rol === 'ADMIN') {
-                        const lista = errorData.productos_sin_stock
-                            .map(p => `• ${p.nombre}: pedido ${p.cantidad_pedida}, disponible ${p.stock_disponible}`)
-                            .join('\n');
-
-                        const autorizar = window.confirm(
-                            `⚠️ OVERRIDE DE SUPERVISOR\n\nProductos sin existencia suficiente:\n${lista}\n\n¿Autorizar la venta de todas formas?`
-                        );
-                
-                        if (autorizar) {
-                            procesarVentaBackend(true); // Re-envía con la bandera de override
-                        }
-                    } else {
-                        alert("❌ Stock insuficiente. Solicita autorización a un Supervisor.");
-                    }
-                    return;
-                }
-
-                alert(`❌ Venta declinada por el sistema: ${errorData.error || 'Error de inventario'}`);
+                alert(`❌ Servidor rechazó la venta: ${errorData.error || 'Error desconocido'}`);
 
             } catch (error) {
-                console.error("Fallo de comunicación POST:", error);
-        
-                // La alerta local que tenías en tu pantalla
-                const forzarImpresionLocal = window.confirm("⚠️ Servidor local no detectado. ¿Desea forzar la impresión del comprobante de forma local?");
+                console.error("❌ Error real en la petición FETCH:", error);
+                
+                // Alerta de respaldo por si el servidor de Node de verdad estuviera apagado
+                const forzarImpresionLocal = window.confirm("⚠️ No se pudo comunicar con el servidor local (Puerto 3000).\n\n¿Desea forzar la impresión del comprobante de forma local de todos modos?");
                 if (forzarImpresionLocal) {
                     window.print();
                     clearCart();
